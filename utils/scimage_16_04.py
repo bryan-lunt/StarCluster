@@ -202,25 +202,26 @@ def install_build_utils():
 
 def install_gridscheduler():
     chdir(SRC_DIR)
-    apt_command('build-dep gridengine')
-    if os.path.isfile('gridscheduler-scbuild.tar.gz'):
-        run_command('tar xvzf gridscheduler-scbuild.tar.gz')
-        run_command('mv gridscheduler /opt/sge6-fresh')
-        return
-    run_command('git clone %s' % GRID_SCHEDULER_GIT)
-    sts, out = run_command('readlink -f `which java`', get_output=True)
-    java_home = out.strip().split('/jre')[0]
-    chdir(os.path.join(SRC_DIR, 'gridscheduler', 'source'))
-    run_command('git checkout -t -b develop origin/develop')
-    env = 'JAVA_HOME=%s' % java_home
-    run_command('%s ./aimk -only-depend' % env)
-    run_command('%s scripts/zerodepend' % env)
-    run_command('%s ./aimk depend' % env)
-    run_command('%s ./aimk -no-secure -no-gui-inst -man' % env)
-    sge_root = '/opt/sge6-fresh'
-    os.mkdir(sge_root)
-    env += ' SGE_ROOT=%s' % sge_root
-    run_command('%s scripts/distinst -all -local -noexit -y -- man' % env)
+    apt_command("install gridengine-common gridengine-client gridengine-exec gridengine-master gridengine-drmaa-dev gridengine-drmaa1.0 python-drmaa")
+    #apt_command('build-dep gridengine')
+    #if os.path.isfile('gridscheduler-scbuild.tar.gz'):
+    #    run_command('tar xvzf gridscheduler-scbuild.tar.gz')
+    #    run_command('mv gridscheduler /opt/sge6-fresh')
+    #    return
+    #run_command('git clone %s' % GRID_SCHEDULER_GIT)
+    #sts, out = run_command('readlink -f `which java`', get_output=True)
+    #java_home = out.strip().split('/jre')[0]
+    #chdir(os.path.join(SRC_DIR, 'gridscheduler', 'source'))
+    #run_command('git checkout -t -b develop origin/develop')
+    #env = 'JAVA_HOME=%s' % java_home
+    #run_command('%s ./aimk -only-depend' % env)
+    #run_command('%s scripts/zerodepend' % env)
+    #run_command('%s ./aimk depend' % env)
+    #run_command('%s ./aimk -no-secure -no-gui-inst -man' % env)
+    #sge_root = '/opt/sge6-fresh'
+    #os.mkdir(sge_root)
+    #env += ' SGE_ROOT=%s' % sge_root
+    #run_command('%s scripts/distinst -all -local -noexit -y -- man' % env)
 
 
 def install_condor():
@@ -431,8 +432,9 @@ def setup_environ():
 def install_nfs():
     chdir(SRC_DIR)
     run_command('initctl reload-configuration')
-    apt_install('nfs-kernel-server')
-    #run_command('ln -s /etc/init.d/nfs-kernel-server /etc/init.d/nfs')
+    apt_install('nfs-common nfs-kernel-server')
+    run_command('ln -s /etc/init.d/nfs-kernel-server /etc/init.d/nfs')
+    run_command('ln -s /etc/init.d/rpcbind /etc/init.d/portmap')
 
 
 def install_default_packages():
@@ -447,7 +449,7 @@ mysql-server mysql-server/root_password_again seen true
     """
     mysqlpreseed.write(preseeds)
     mysqlpreseed.close()
-    #run_command('service apache2 stop') #Not needed on a clean cloudimage
+    run_command('service apache2 stop') #Not needed on a clean cloudimage
     run_command('debconf-set-selections < %s' % mysqlpreseed.name)
     run_command('rm %s' % mysqlpreseed.name)
     pkgs = "git vim mercurial subversion cvs encfs keychain screen tmux zsh "

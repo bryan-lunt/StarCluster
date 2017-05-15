@@ -289,8 +289,10 @@ def install_python_packages():
     install_pandas()
     install_ipython()
     apt_command('build-dep python-imaging')
-    pkgs = "virtualenv pillow boto matplotlib django mpi4py ctypes Cython "
-    pkgs += "pudb supervisor "
+    apt_command('install python-ctypeslib python-virtualenv python-matplotlib python-mpi4py python-django python-boto python-pudb')
+    run_command("pip install --upgrade pip")
+    pkgs = "pillow Cython "
+    pkgs += "supervisor "
     run_command("pip install %s" % pkgs)
 
 
@@ -354,11 +356,15 @@ def install_openmpi():
 
 def install_hadoop():
     chdir(SRC_DIR)
-    hadoop_pkgs = ['namenode', 'datanode', 'tasktracker', 'jobtracker',
-                   'secondarynamenode']
-    pkgs = ['hadoop-0.20'] + ['hadoop-0.20-%s' % pkg for pkg in hadoop_pkgs]
-    apt_install(' '.join(pkgs))
-    run_command('easy_install dumbo')
+    #hadoop_pkgs = ['namenode', 'datanode', 'tasktracker', 'jobtracker',
+    #               'secondarynamenode']
+    #pkgs = ['hadoop-0.20'] + ['hadoop-0.20-%s' % pkg for pkg in hadoop_pkgs]
+    #apt_install(' '.join(pkgs))
+    #run_command('easy_install dumbo')
+    run_command("curl -O 'http://apache.mirrors.tds.net/hadoop/common/hadoop-2.8.0/hadoop-2.8.0.tar.gz'")
+    run_command("tar -zxvf hadoop-2.8.0.tar.gz")
+    run_command("mv hadoop-2.8.0 /usr/local/hadoop")
+    run_command("""echo 'export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:bin/java::")' >> /usr/local/hadoop/etc/hadoop/hadoop-env.sh """)
 
 
 def install_ipython():
@@ -441,7 +447,7 @@ mysql-server mysql-server/root_password_again seen true
     """
     mysqlpreseed.write(preseeds)
     mysqlpreseed.close()
-    run_command('service apache2 stop')
+    #run_command('service apache2 stop') #Not needed on a clean cloudimage
     run_command('debconf-set-selections < %s' % mysqlpreseed.name)
     run_command('rm %s' % mysqlpreseed.name)
     pkgs = "git vim mercurial subversion cvs encfs keychain screen tmux zsh "

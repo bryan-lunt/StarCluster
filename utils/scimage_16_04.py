@@ -433,8 +433,10 @@ def install_nfs():
     chdir(SRC_DIR)
     run_command('initctl reload-configuration')
     apt_install('nfs-common nfs-kernel-server')
-    run_command('ln -s /etc/init.d/nfs-kernel-server /etc/init.d/nfs')
-    run_command('ln -s /etc/init.d/rpcbind /etc/init.d/portmap')
+    if not os.path.exists('/etc/init.d/nfs'):
+        run_command('ln -s /etc/init.d/nfs-kernel-server /etc/init.d/nfs')
+    if not os.path.exists('/etc/init.d/portmap'):
+        run_command('ln -s /etc/init.d/rpcbind /etc/init.d/portmap')
 
 
 def install_default_packages():
@@ -449,15 +451,17 @@ mysql-server mysql-server/root_password_again seen true
     """
     mysqlpreseed.write(preseeds)
     mysqlpreseed.close()
-    run_command('service apache2 stop') #Not needed on a clean cloudimage
+    #run_command('service apache2 stop') #Not needed on a clean cloudimage
     run_command('debconf-set-selections < %s' % mysqlpreseed.name)
     run_command('rm %s' % mysqlpreseed.name)
     pkgs = "git vim mercurial subversion cvs encfs keychain screen tmux zsh "
     pkgs += "ksh csh tcsh ec2-api-tools ec2-ami-tools mysql-server "
-    pkgs += "mysql-client apache2 libapache2-mod-wsgi nginx sysv-rc-conf "
+    pkgs += "mysql-client apache2 libapache2-mod-wsgi sysv-rc-conf "
     pkgs += "pssh emacs irssi htop vim-scripts mosh default-jdk mpich xvfb "
     pkgs += "openmpi-bin libopenmpi-dev libopenblas-dev liblapack-dev julia"
     apt_install(pkgs)
+    run_command('service apache2 stop')
+    apt_install("nginx-core nginx")
 
 
 def configure_init():

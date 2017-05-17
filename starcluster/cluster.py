@@ -1155,12 +1155,59 @@ class Cluster(object):
         """
         log.info("Launching a %d-node %s" % (self.cluster_size, ' '.join(
             ['VPC' if self.subnet_id else '', 'cluster...']).strip()))
+
+        if not self.subnet_id: #TODO: We need to automatically create a new VPC, etc. for this cluster
+            self.subnet_id = self.create_cluster_vpc()
+
         mtype = self.master_instance_type or self.node_instance_type
         self.master_instance_type = mtype
         if self.spot_bid:
             self._create_spot_cluster()
         else:
             self._create_flat_rate_cluster()
+
+    def create_cluster_vpc(self):
+        """
+        Create a new VPC with appropriate routing tables and whatnot
+        """
+        return_subnet_id = None
+        #TODO: Need to keep track of some of this stuff in order to delete it later.
+        #TODO: Need to add exception handling so that an incomplete cluster initializaiton doesn't leave a bunch of new VPCs in account.
+
+        new_vpc_object = self.ec2.conn.create_vpc("172.30.0.0/24") #TODO: Get from configuration some default vpc stuff
+        new_vpc_object.add_tag("Name","sc-{}-autocreated-vpc".format(self.cluster_tag))
+
+        new_subnet_object = self.ec2.conn.create_subnet(new_vpc_object.id,"172.30.0.0/24") #TODO: need to get preferred availability zone if it exists, need to set this cluster's zone if chosen here.
+        new_subnet_object.add_tag("Name","sc-{}-autocreated-vpc-subnet".format(self.cluster_tag))
+
+        new_gateway_object = self.ec2.conn.create_internet_gateway()
+        new_gateway_object.add_tag("Name","sc-{}-autocreated-vpc-gateway".format(self.cluster_tag))
+
+        #attach the gateway to the VPC
+        self.ec2.conn.attach_internet_gateway(new_gateway_object.id, new_vpc_object.id)
+
+        new_route_table_object = self.ec2.conn.create_route_table(new_vpc_object.id)
+        new_route_table_object.add_tag("Name","sc-{}-autocreated-vpc-route-table".format(self.cluster_tag))
+
+        route_created = self.ec2.conn.create_route(new_route_table_object.id,
+                                                        "0.0.0.0/0",gateway_id=new_gateway_object.id)
+
+        self.ec2.conn.associate_route_table(new_route_table_object.id,new_subnet_object.id)
+
+        return_subnet_id = new_subnet_object.id
+
+        if False:
+            import ipdb
+            ipdb.set_trace()
+
+            self.ec2.conn.delete_subnet(new_subnet_object.id)
+            self.ec2.conn.delete_vpc(new_vpc_object.id)
+
+            import sys
+            sys.exit(1)
+
+        return return_subnet_id
+
 
     def _create_flat_rate_cluster(self):
         """
@@ -1563,6 +1610,8 @@ class Cluster(object):
         instances, canceling all spot requests (if any), removing its placement
         group (if any), and removing its security group.
         """
+        #TODO: We need to somehow persist the VPC that this cluster belongs to, and, does that VPC belong to the cluster or not?
+        #IF that VPC was created when the cluster was created, delete it. Otherwise, leave it.
         try:
             self.run_plugins(method_name="on_shutdown", reverse=True)
         except exception.MasterDoesNotExist as e:

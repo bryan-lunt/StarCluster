@@ -202,26 +202,27 @@ def install_build_utils():
 
 def install_gridscheduler():
     chdir(SRC_DIR)
-    apt_command("install gridengine-common gridengine-client gridengine-exec gridengine-master gridengine-drmaa-dev gridengine-drmaa1.0 python-drmaa")
-    #apt_command('build-dep gridengine')
-    #if os.path.isfile('gridscheduler-scbuild.tar.gz'):
-    #    run_command('tar xvzf gridscheduler-scbuild.tar.gz')
-    #    run_command('mv gridscheduler /opt/sge6-fresh')
-    #    return
-    #run_command('git clone %s' % GRID_SCHEDULER_GIT)
-    #sts, out = run_command('readlink -f `which java`', get_output=True)
-    #java_home = out.strip().split('/jre')[0]
-    #chdir(os.path.join(SRC_DIR, 'gridscheduler', 'source'))
-    #run_command('git checkout -t -b develop origin/develop')
-    #env = 'JAVA_HOME=%s' % java_home
-    #run_command('%s ./aimk -only-depend' % env)
-    #run_command('%s scripts/zerodepend' % env)
-    #run_command('%s ./aimk depend' % env)
-    #run_command('%s ./aimk -no-secure -no-gui-inst -man' % env)
-    #sge_root = '/opt/sge6-fresh'
-    #os.mkdir(sge_root)
-    #env += ' SGE_ROOT=%s' % sge_root
-    #run_command('%s scripts/distinst -all -local -noexit -y -- man' % env)
+    apt_install("libdb-java libdb-dev libdb++-dev libhwloc-common libhwloc-dev hwloc libhwloc5")
+    apt_command('build-dep gridengine')
+    if os.path.isfile('gridscheduler-scbuild.tar.gz'):
+        run_command('tar xvzf gridscheduler-scbuild.tar.gz')
+        run_command('mv gridscheduler /opt/sge6-fresh')
+        return
+    run_command('git clone %s' % GRID_SCHEDULER_GIT)
+    sts, out = run_command('readlink -f `which java`', get_output=True)
+    java_home = out.strip().split('/jre')[0]
+    chdir(os.path.join(SRC_DIR, 'gridscheduler', 'source'))
+    run_command('git checkout -t -b develop origin/develop')
+    env = 'JAVA_HOME=%s' % java_home
+    run_command('%s ./aimk -only-depend' % env)
+    run_command('%s scripts/zerodepend' % env)
+    run_command('%s ./aimk depend' % env)
+    run_command('%s ./aimk -no-secure -no-gui-inst -spool-classic -no-qmon' % env)
+    run_command('%s ./aimk -man' % env)
+    sge_root = '/opt/sge6-fresh'
+    os.mkdir(sge_root)
+    env += ' SGE_ROOT=%s' % sge_root
+    run_command('%s scripts/distinst -all -local -noexit -y -- man' % env)
 
 
 def install_condor():
